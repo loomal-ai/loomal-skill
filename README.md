@@ -25,13 +25,13 @@ This drops the skill into your workspace's `skills/` directory.
 
 ### Register the MCP server
 
-The skill teaches the agent *when* to use Loomal. The MCP server provides the actual tools. Register it once per machine:
+The skill teaches the agent *when* to use Loomal. The MCP server provides the actual tools. Register it once per machine — the npm package version is pinned for supply-chain safety:
 
 ```bash
-openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
+openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
 ```
 
-Get a `loid-...` key at [console.loomal.ai](https://console.loomal.ai). Scopes attached to the key control which tools appear.
+Get a `loid-...` key at [console.loomal.ai](https://console.loomal.ai). Scopes attached to the key control which tools appear. Bump `@loomal/mcp@0.5.0` to a newer version intentionally when you want a release; check [npm](https://www.npmjs.com/package/@loomal/mcp) for the latest.
 
 ### Manual install
 
@@ -92,8 +92,8 @@ Tools only appear if your identity has the required scopes (`mail:send`, `vault:
 Register one MCP server per identity:
 
 ```bash
-openclaw mcp set loomal-sales '{"command":"npx","args":["-y","@loomal/mcp"],"env":{"LOOMAL_API_KEY":"loid-sales-key"}}'
-openclaw mcp set loomal-support '{"command":"npx","args":["-y","@loomal/mcp"],"env":{"LOOMAL_API_KEY":"loid-support-key"}}'
+openclaw mcp set loomal-sales '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-sales-key"}}'
+openclaw mcp set loomal-support '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-support-key"}}'
 ```
 
 Tools namespace per server (`loomal-sales:mail_send` vs `loomal-support:mail_send`).

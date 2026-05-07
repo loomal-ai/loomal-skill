@@ -1,7 +1,7 @@
 ---
 name: loomal-skill
 description: Loomal capabilities — agent inbox at mailgent.dev, encrypted credential vault with 2FA, calendar, and USDC payments. All actions are user-directed and scope-gated by a Loomal API key.
-version: 0.1.2
+version: 0.1.3
 metadata:
   openclaw:
     requires:
