@@ -18,7 +18,7 @@ All tools are scope-gated by the API key. The trust boundary is enforced on the 
 ### One command (recommended)
 
 ```bash
-clawhub install loomal
+clawhub install loomal-skill
 ```
 
 This drops the skill into your workspace's `skills/` directory.
