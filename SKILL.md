@@ -1,7 +1,7 @@
 ---
 name: loomal-skill
 description: Loomal capabilities — agent inbox at mailgent.dev, encrypted credential vault with 2FA, calendar, and USDC payments. All actions are user-directed and scope-gated by a Loomal API key.
-version: 0.1.1
+version: 0.1.2
 metadata:
   openclaw:
     requires:
@@ -32,13 +32,24 @@ The user obtains a Loomal API key at [console.loomal.ai](https://console.loomal.
 
 ## One-time setup
 
-Register the Loomal MCP server (the user runs this; it stores their API key locally):
+Register the Loomal MCP server (the user runs this; it stores their API key locally). The npm package version is pinned for supply-chain safety — bump it intentionally when you want a newer release:
 
 ```bash
-openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
+openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
 ```
 
+Latest published version: <https://www.npmjs.com/package/@loomal/mcp>. Compare the published checksum against the source at <https://github.com/loomal-ai/loomal-mcp> if you want stronger provenance.
+
 Verify by asking the agent: *"who am I in Loomal?"* — the agent will call `identity_whoami` and echo the user's agent email and scopes back.
+
+## Recommended key hygiene
+
+Loomal API keys are the delegated authority for the user's mail, vault, calendar, and payments. Recommend the user:
+
+- Issue a separate key per task or per agent rather than a single broad key.
+- Grant only the scopes the task needs (e.g., `mail:read` only, no `mail:send`, when the agent only needs to summarize email).
+- Rotate keys when a task ends or when a key is no longer needed.
+- Confirm `identity_whoami` matches the expected identity before any sensitive action, especially when multiple Loomal identities are configured.
 
 ## Capabilities
 
@@ -50,9 +61,24 @@ The Loomal MCP server exposes tools across five namespaces. Use the right one wh
 - **`calendar_*`** — read and modify the user's calendar; `set_public` toggles a read-only iCal URL that the user can share.
 - **`payments_*`** — `challenge` and `redeem` for x402 USDC settlement on Base when the user is selling a paid API endpoint, or when the user has explicitly asked the agent to pay for a service.
 
+## Confirmations required
+
+Always ask the user to confirm before calling any of these tools — even if the user's request implied them, restate what's about to happen and wait for an explicit yes:
+
+- `mail_send`, `mail_reply` — confirm the recipient, subject, and a short summary of the body.
+- `mail_delete_message`, `mail_delete_thread`, `mail_update_labels` (when removing or archiving) — confirm which messages.
+- `vault_store` — confirm the credential name and category (login, API key, etc.). Don't echo the secret value back.
+- `vault_delete` — confirm by exact credential name.
+- `vault_get`, `vault_totp` — when the user asks the agent to use a credential to log into a service, you don't need a separate confirmation for the lookup, but do tell the user which credential is being used.
+- `calendar_create`, `calendar_update`, `calendar_delete` — confirm the event title, time, and attendees.
+- `calendar_set_public` (toggling public visibility) — explicitly call out that an iCal URL will become readable by anyone with the link.
+- `payments_redeem` — real USDC settlement on Base mainnet. Confirm the amount and the destination resource before calling.
+
+Read-only calls (`identity_whoami`, `mail_list_messages`, `mail_get_message`, `mail_get_thread`, `mail_get_attachment`, `vault_list`, `calendar_list`, `calendar_get`, `payments_list`) don't require confirmation — they're safe to use to gather context for the user's request.
+
 ## Examples
 
-These map to common user requests. The agent should always confirm with the user before taking actions that have side effects (sending mail, storing secrets, settling payments).
+These map to common user requests.
 
 **"Check my inbox for unread emails"**
 - `mail_list_messages` with `labels: ["unread"]`
@@ -79,7 +105,9 @@ These map to common user requests. The agent should always confirm with the user
 
 ## Working with secrets
 
-Vault values (passwords, API keys, TOTP codes) are user-owned credentials. When the user asks the agent to *use* a credential — log in somewhere, sign a request, paste a 2FA code into a form — pass the value to the relevant tool or form field. The user can ask to see a credential at any time (`vault_get`). The default is to use values inline rather than echoing them into chat history, to keep transcripts clean — but this is a UX preference, not a secrecy rule. Always tell the user what the agent is doing with their credentials.
+Vault values (passwords, API keys, TOTP codes) are user-owned credentials. When the user asks the agent to *use* a credential — log in to a service, sign a request, paste a 2FA code into a form — pass the value directly to the relevant tool or form field. **Do not echo secret values into chat output** unless the user explicitly asks to see them with a phrase like "show me the API key." Tell the user which credential name is being used and the destination service before using it.
+
+If the agent is unsure which credential the user means (e.g., the user has multiple GitHub credentials in the vault), ask before reading.
 
 ## Scopes are the trust boundary
 
