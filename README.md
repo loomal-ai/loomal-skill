@@ -8,7 +8,7 @@ Gives your agent its own:
 - **Encrypted vault** for logins, API keys, OAuth tokens, certs, cards (AES-256-GCM at rest)
 - **2FA** — attach TOTP to any credential, fetch live codes without ever exposing the seed
 - **Calendar** — read, create, update events; expose a public iCal URL
-- **Payments** — accept USDC on Base via x402 (HTTP 402 + buyer-signed `X-Payment` header)
+- **Payments** — pay any x402-priced URL in USDC on Base under per-call + daily caps you set as a mandate, *and* accept USDC for your own paid endpoints
 - **DID identity** — sign and verify with the agent's Ed25519 key
 
 All tools are scope-gated by the API key. The trust boundary is enforced on the API side, so a compromised agent only sees what its key was scoped for.
@@ -28,10 +28,10 @@ This drops the skill into your workspace's `skills/` directory.
 The skill teaches the agent *when* to use Loomal. The MCP server provides the actual tools. Register it once per machine — the npm package version is pinned for supply-chain safety:
 
 ```bash
-openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
+openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.6.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
 ```
 
-Get a `loid-...` key at [console.loomal.ai](https://console.loomal.ai). Scopes attached to the key control which tools appear. Bump `@loomal/mcp@0.5.0` to a newer version intentionally when you want a release; check [npm](https://www.npmjs.com/package/@loomal/mcp) for the latest.
+Get a `loid-...` key at [console.loomal.ai](https://console.loomal.ai). Scopes attached to the key control which tools appear. Bump `@loomal/mcp@0.6.0` to a newer version intentionally when you want a release; check [npm](https://www.npmjs.com/package/@loomal/mcp) for the latest.
 
 ### Manual install
 
@@ -62,7 +62,8 @@ The agent will:
 3. `mail_list_messages` until the welcome email lands, `mail_get_message` to read the verification link
 4. `vault_store` the credential (`type: "LOGIN"`) with a TOTP attached
 5. `vault_totp` for the live 6-digit 2FA code at login time
-6. On the 402 response, sign + send `X-Payment` and call `payments_redeem`
+6. `payments_mandates_create` (one-time per agent) to set per-call + daily USDC caps
+7. `payments_pay` with the seller's URL — Loomal does the x402 handshake + EIP-3009 signing under your wallet, returns the content plus the on-chain `txHash`
 
 Other common asks:
 
@@ -83,17 +84,18 @@ Other common asks:
 | `mail_*` | `send`, `reply`, `list_messages`, `get_message`, `get_attachment`, `list_threads`, `get_thread`, `update_labels`, `update_thread_labels`, `delete_message`, `delete_thread` |
 | `vault_*` | `list`, `get`, `store`, `delete`, `totp`, `totp_use_backup` |
 | `calendar_*` | `list`, `get`, `create`, `update`, `delete`, `set_public` |
-| `payments_*` | `challenge`, `redeem`, `list`, `sellers_endpoints_*` |
+| `payments_*` (buyer) | `pay`, `activity`, `mandates_create`, `mandates_list`, `mandates_get`, `mandates_revoke` |
+| `payments_*` (seller) | `challenge`, `redeem`, `list`, `sellers_endpoints_*` |
 
-Tools only appear if your identity has the required scopes (`mail:send`, `vault:write`, `payments:accept`, etc.). Add scopes at [console.loomal.ai](https://console.loomal.ai).
+Tools only appear if your identity has the required scopes (`mail:send`, `vault:write`, `payments:spend`, `payments:accept`, etc.). Add scopes at [console.loomal.ai](https://console.loomal.ai).
 
 ## Multiple inboxes
 
 Register one MCP server per identity:
 
 ```bash
-openclaw mcp set loomal-sales '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-sales-key"}}'
-openclaw mcp set loomal-support '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-support-key"}}'
+openclaw mcp set loomal-sales '{"command":"npx","args":["-y","@loomal/mcp@0.6.0"],"env":{"LOOMAL_API_KEY":"loid-sales-key"}}'
+openclaw mcp set loomal-support '{"command":"npx","args":["-y","@loomal/mcp@0.6.0"],"env":{"LOOMAL_API_KEY":"loid-support-key"}}'
 ```
 
 Tools namespace per server (`loomal-sales:mail_send` vs `loomal-support:mail_send`).

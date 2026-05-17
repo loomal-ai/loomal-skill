@@ -1,7 +1,7 @@
 ---
 name: loomal-skill
-description: Loomal capabilities — agent inbox at mailgent.dev, encrypted credential vault with 2FA, calendar, and USDC payments. All actions are user-directed and scope-gated by a Loomal API key.
-version: 0.1.3
+description: Loomal capabilities — agent inbox at mailgent.dev, encrypted credential vault with 2FA, calendar, and USDC payments on Base (both spend with mandate-capped paying and accept on your own paid endpoints). All actions are user-directed and scope-gated by a Loomal API key.
+version: 0.2.0
 metadata:
   openclaw:
     requires:
@@ -35,7 +35,7 @@ The user obtains a Loomal API key at [console.loomal.ai](https://console.loomal.
 Register the Loomal MCP server (the user runs this; it stores their API key locally). The npm package version is pinned for supply-chain safety — bump it intentionally when you want a newer release:
 
 ```bash
-openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.5.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
+openclaw mcp set loomal '{"command":"npx","args":["-y","@loomal/mcp@0.6.0"],"env":{"LOOMAL_API_KEY":"loid-..."}}'
 ```
 
 Latest published version: <https://www.npmjs.com/package/@loomal/mcp>. Compare the published checksum against the source at <https://github.com/loomal-ai/loomal-mcp> if you want stronger provenance.
@@ -59,7 +59,9 @@ The Loomal MCP server exposes tools across five namespaces. Use the right one wh
 - **`mail_*`** — read and send email from the user's `agent-xxx@mailgent.dev` address. Use `mail_send` for new threads, `mail_reply` to keep threading correct, `mail_list_messages` with `labels: ["unread"]` to find new mail.
 - **`vault_*`** — read and write the user's encrypted credential store. `vault_store` saves a credential the user provides; `vault_get` retrieves one when the user asks the agent to use it. `vault_totp` returns the live 6-digit 2FA code (the seed itself stays encrypted and never leaves the vault).
 - **`calendar_*`** — read and modify the user's calendar; `set_public` toggles a read-only iCal URL that the user can share.
-- **`payments_*`** — `challenge` and `redeem` for x402 USDC settlement on Base when the user is selling a paid API endpoint, or when the user has explicitly asked the agent to pay for a service.
+- **`payments_*`** — two flows on Base USDC.
+  - **Spending (buyer):** `payments_mandates_create` once to set per-call + daily caps, then `payments_pay` with any x402-priced URL; Loomal runs the handshake server-side and returns the seller's content plus an on-chain `txHash`. `payments_activity` shows spend/income history; `payments_mandates_list/get/revoke` manage the policy.
+  - **Selling:** `payments_challenge` and `payments_redeem` when the user is operating a paid API endpoint themselves.
 
 ## Confirmations required
 
